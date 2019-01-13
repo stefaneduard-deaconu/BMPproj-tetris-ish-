@@ -2,6 +2,9 @@
 // for I/O
 #include <stdlib.h>
 // for malloc(), calloc()
+#include <string.h>
+// for strlen()
+
 
 #include "../headers/bmp_header.h"
 
@@ -43,9 +46,138 @@ bmp_infoheader i_head() // returns the infoheader we use :)
 // Create the 7 pieces (.bmp images), each one rotated by 0 degrees. The constituting squares
 //   are also 10x10 pixels; add a white (255,255,255)  border of 10x10 pixels.
 // The .bmp's will be named: piesa_{piece_name}.bmp
-void task_1()
+
+// void add_block(unsigned dim, unsigned x, unsigned y, unsigned width)
+// {
+//     int row, col, pixel;
+//     for (row = (y - 1) * dim; row >= 0; row--)
+//     {
+//         for (col = (x - 1) * dim; col >= 0; col--)
+//         {
+//             pixel = 3 * row * width + 3 * col
+//         }
+//     }
+// }
+
+void task_1(int width)
 {
+    typedef struct {
+        unsigned char B, G, R;
+    } colours;
+    colours C[8] = { // last one is white
+        {
+            255, 255, 0
+        },
+        {
+            0, 0, 255
+        },
+        {
+            255, 0, 0
+        },
+        {
+            0, 255, 0
+        },
+        {
+            255, 140, 0
+        },
+        {
+            255, 0, 255
+        },
+        {
+            130, 0, 255
+        },
+        {
+            255, 255, 255
+        }
+    };
+    colours colour[7][10];
+    colours white[30]; // for it to be
+    int i, j;
+    for (i = 0; i < 7; i++)
+        for(j = 0; j < 10; j++)
+            colour[i][j] = C[i];
+    for (j = 0; j < 10; j++)
+        white[j] = C[8];
     // we use auxiliary matrices, one for every piece, and we "expand" them into the image ;)
+    unsigned piece, n = 7; // n is the number of pieces
+    unsigned rows[] = {4, 6, 4, 4, 5, 5, 4};
+    unsigned char P[7][6][6] = { // for the types, the dimension can't be variable
+        {
+            "0000",
+            "0110",
+            "0110",
+            "0000"
+        },
+        {
+            "000",
+            "010",
+            "010",
+            "010",
+            "010",
+            "000"
+        },
+        {
+            "00000",
+            "00110",
+            "01100",
+            "00000"
+        },
+        {
+            "00000",
+            "01100",
+            "00110",
+            "00000"
+        },
+        {
+            "0000",
+            "0100",
+            "0100",
+            "0110",
+            "0000"
+        },
+        {
+            "0000",
+            "0010",
+            "0010",
+            "0110",
+            "0000"
+        },
+        {
+            "00000",
+            "01110",
+            "00100",
+            "00000"
+        },
+    },
+        piece_name[] = "OISZLJT";
+    //
+    FILE *f;
+    unsigned char piece_file[] = "piesa_P.bmp";
+    int curr_pos;
+    //
+    for(piece = 0; piece < n; piece++)
+    {
+        piece_file[6] = piece_name[piece];
+        f = fopen(piece_file, "wb");
+        for(i = 0; i < rows[piece]; i++)
+        {
+            for (j = 0; j < strlen(P[piece][i]); j++)
+            {
+                curr_pos = 0;
+                while(curr_pos < 10) // size of block
+                {
+                    if (P[piece][i][j] == '1')
+                        fwrite(colour[piece], 240, 1, f);
+                    else
+                        fwrite(white, 240, 1, f);
+                    fseek(f, width - 240, SEEK_CUR);
+                }
+                fseek(f, -10 * width, SEEK_CUR);
+            }
+            // padding!
+        }
+        fclose(f);
+    }
 }
 
 // Task II
@@ -59,12 +191,23 @@ void task_2()
 }
 
 int main(int argc, char *argv[]) {
-    bmp_fileheader fh;
-    bmp_infoheader ih;
-    fh = f_head();
-    ih = i_head();
+    bmp_fileheader *fh = malloc(sizeof(bmp_fileheader));
+    bmp_infoheader *ih = malloc(sizeof(bmp_infoheader));
+    *fh = f_head();
+    *ih = i_head();
     //
-    task_1();
+    // task_1();
+    unsigned char *black = calloc(1, 40 * 40 * 3 + 0);
+    FILE *f = fopen("test.bmp", "wb");
+    ih->width = 40;
+    ih->height = 40;
+    ih->biSizeImage = 40 * 40 * 3 + 0; // divisible by 4 :), ----> no padding
+    fh->bfSize = sizeof(bmp_fileheader) + sizeof(bmp_infoheader) + ih->biSizeImage; // or 52 plus "that thing"
+    fwrite(fh, sizeof(bmp_fileheader), 1, f);
+    fwrite(ih, sizeof(bmp_infoheader), 1, f);
+    fwrite(black, ih->biSizeImage, 1, f);
+    fclose(f);
+    //
     task_2();
     //
     return 0;
